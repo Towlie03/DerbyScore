@@ -41,6 +41,10 @@ int fiveButtonState=LOW;
 int jamButtonState=LOW;
 int timeOutButtonState=LOW;
 
+//================COMS
+int sendToArduinoCount=7;
+int loopCount=0;
+
 void setup() {
   lcd.begin(16,4);
 
@@ -69,7 +73,7 @@ void loop() {
     getScore(timeCorrection);
     
     periodTime = periodTime +timeCorrection*1000;
-    //freezePeriodTime =freezePeriodTime+timeCorrection*1000;
+    freezePeriodTime =freezePeriodTime+timeCorrection*1000;
   }
   else if(digitalRead(teamSelectorPin)==HIGH){
      getScore(whiteScore);
@@ -89,10 +93,7 @@ void loop() {
         timeOutStarted=true;
         timeOutTimer=millis();
         freezePeriodTime =periodTime-millis();
-      }
-      else{
-         timeOutStarted=false;
-         periodTime=periodTime+(millis()-timeOutTimer);
+        jamStarted=false;
       }
       
       timeOutButtonState=HIGH;
@@ -113,6 +114,10 @@ void loop() {
       else{
         jamStarted=false;
       }
+      if(timeOutStarted){
+        timeOutStarted=false;
+         periodTime=periodTime+(millis()-timeOutTimer);
+      }
       jamButtonState=HIGH;
     }
   }
@@ -122,10 +127,15 @@ void loop() {
   if(periodTime<millis())
     periodStarted=false;
     
-  Serial.println("W:"+String(whiteScore));
-  Serial.println("B:"+String(blackScore));
-  //To stop LCD screen flicker
-  delay(125);
+  if(loopCount==sendToArduinoCount){
+    Serial.println("W:"+String(whiteScore));
+    Serial.println("B:"+String(blackScore));
+    Serial.println("F:");
+    loopCount=0;
+  }
+  //Contorol Loop Speed
+  delay(50);
+  loopCount++;
 }
 
 void limitScore(int &score){
@@ -220,17 +230,20 @@ void printToScreen(int whitePnt, int blackPnt){
   String periodText ="PER-";
   if(timeOutStarted){
     lcd.print(periodText+freezeTime(freezePeriodTime));
-    Serial.println("P:"+freezeTime(freezePeriodTime));
+    if(loopCount==sendToArduinoCount)
+      Serial.println("P:"+freezeTime(freezePeriodTime));
   }
   else{
     
     if(periodStarted){
       lcd.print(periodText+gameTime(periodTime));
-      Serial.println("P:"+gameTime(periodTime));
+      if(loopCount==sendToArduinoCount)
+        Serial.println("P:"+gameTime(periodTime));
     }
     else{
       lcd.print(periodText+"30:00");
-      Serial.println("P:30:00");
+    if(loopCount==sendToArduinoCount)
+        Serial.println("P:30:00");
     }
   }
   
@@ -238,10 +251,12 @@ void printToScreen(int whitePnt, int blackPnt){
   String jamText="   JAM-";
   if(jamStarted){
     lcd.print(jamText+gameTime(jamTime));
-    Serial.println("J:"+gameTime(jamTime));
+    if(loopCount==sendToArduinoCount)
+      Serial.println("J:"+gameTime(jamTime));
   }
    else{
      lcd.print(jamText+"02:00");
+  if(loopCount==sendToArduinoCount)
      Serial.println("J:02:00");
    }
 }
